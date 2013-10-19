@@ -12,9 +12,15 @@ from mezzanine.accounts import get_profile_form
 from mezzanine.accounts.forms import LoginForm, PasswordResetForm
 from mezzanine.conf import settings
 from mezzanine.utils.email import send_verification_mail, send_approve_mail
+#from mezzanine.utils.email import send_approve_mail
+#from stores.checkout import send_verification_mail
+
 from mezzanine.utils.urls import login_redirect, next_url
 from mezzanine.utils.views import render
 
+from stores import location_utils
+import ast
+from stores.checkout import new_location_get_ids
 
 User = get_user_model()
 
@@ -28,7 +34,21 @@ def login(request, template="accounts/account_login.html"):
         authenticated_user = form.save()
         info(request, _("Successfully logged in"))
         auth_login(request, authenticated_user)
-        return login_redirect(request)
+
+        customer = request.user.get_profile()
+        request.session['location'] = customer.location
+        request.session['address'] = customer.address
+        request.session['age'] = True
+
+        loc = ast.literal_eval(request.session['location'])
+        avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+
+#        return login_redirect(request)
+        if 'cart loaded' in request.session:
+            return redirect('/shop/cart/')
+        else:
+            return redirect('/shop/')
+
     context = {"form": form, "title": _("Log in")}
     return render(request, template, context)
 
@@ -39,6 +59,21 @@ def logout(request):
     """
     auth_logout(request)
     info(request, _("Successfully logged out"))
+
+    if 'stores' in request.session:
+        del request.session['stores']
+    if 'cart loaded' in request.session:
+        del request.session['cart loaded']
+    if 'location' in request.session:
+        del request.session['location']
+        del request.session['address']
+        del request.session['store ids']
+        del request.session['available store names']
+        del request.session['available liquor types']
+    if 'age' in request.session:
+        del request.session['age']
+
+#    return redirect('/')
     return redirect(next_url(request) or "/")
 
 
@@ -59,11 +94,32 @@ def signup(request, template="accounts/account_signup.html"):
                 send_verification_mail(request, new_user, "signup_verify")
                 info(request, _("A verification email has been sent with "
                                 "a link for activating your account."))
+#            return redirect(request.GET.get("next", "/"))
             return redirect(next_url(request) or "/")
         else:
             info(request, _("Successfully signed up"))
             auth_login(request, new_user)
-            return login_redirect(request)
+
+            customer = request.user.get_profile()
+            customer_address = customer.address + ', ' + customer.zip_code
+            loc = location_utils.getLocation(customer_address)
+            correct_address = location_utils.getAddress(loc[0],loc[1])
+            customer.location = loc
+            customer.address = correct_address
+            customer.save()
+
+            request.session['location'] = (loc[0],loc[1])
+            request.session['age'] = True
+            request.session['address'] = correct_address
+            request.session['map'] = True
+
+            avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+
+#            return login_redirect(request)
+            if 'cart loaded' in request.session:
+                return redirect('/shop/cart/')
+            else:
+                return redirect('/shop/')
     context = {"form": form, "title": _("Sign up")}
     return render(request, template, context)
 
@@ -81,11 +137,30 @@ def signup_verify(request, uidb36=None, token=None):
         user.save()
         auth_login(request, user)
         info(request, _("Successfully signed up"))
-        return login_redirect(request)
+
+        customer = request.user.get_profile()
+        customer_address = customer.address + ', ' + customer.zip_code
+        loc = location_utils.getLocation(customer_address)
+        correct_address = location_utils.getAddress(loc[0],loc[1])
+        customer.location = loc
+        customer.address = correct_address
+        customer.save()
+
+        request.session['location'] = (loc[0],loc[1])
+        request.session['age'] = True
+        request.session['address'] = correct_address
+        request.session['map'] = True
+
+        avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+
+#        return login_redirect(request)
+        if 'cart loaded' in request.session:
+            return redirect('/shop/cart/')
+        else:
+            return redirect('/shop/')
     else:
         error(request, _("The link you clicked is no longer valid."))
         return redirect("/")
-
 
 @login_required
 def profile_redirect(request):
@@ -126,6 +201,22 @@ def profile_update(request, template="accounts/account_profile_update.html"):
         user = form.save()
         info(request, _("Profile updated"))
         try:
+
+            customer = request.user.get_profile()
+            customer_address = customer.address + ', ' + customer.zip_code
+            loc = location_utils.getLocation(customer_address)
+            correct_address = location_utils.getAddress(loc[0],loc[1])
+            customer.location = loc
+            customer.address = correct_address
+            customer.save()
+
+            request.session['location'] = (loc[0],loc[1])
+            request.session['age'] = True
+            request.session['address'] = correct_address
+            request.session['map'] = True
+
+            avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+
             return redirect("profile", username=user.username)
         except NoReverseMatch:
             return redirect("profile_update")

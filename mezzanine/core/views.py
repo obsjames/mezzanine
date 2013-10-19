@@ -24,6 +24,10 @@ from mezzanine.utils.views import is_editable, paginate, render, set_cookie
 from mezzanine.utils.sites import has_site_permission
 from mezzanine.utils.urls import next_url
 
+from cartridge.shop.models import Product, Store
+from django.http import HttpResponseRedirect
+from django.template.defaultfilters import slugify
+from django.contrib.messages import info
 
 def set_device(request, device=""):
     """
@@ -116,11 +120,46 @@ def search(request, template="search_results.html"):
     else:
         search_type = search_model._meta.verbose_name_plural.capitalize()
     results = search_model.objects.search(query, for_user=request.user)
-    paginated = paginate(results, page, per_page, max_paging_links)
-    context = {"query": query, "results": paginated,
-               "search_type": search_type}
-    return render(request, template, context)
 
+    if 'location' and 'age' in request.session:
+        if 'cart loaded' in request.session:
+            stores = request.session['stores']
+
+        else:
+            avail_store_ids = request.session['store ids']
+
+            if avail_store_ids:
+                stores = Store.objects.filter(id__in=avail_store_ids)
+            else:
+                return HttpResponseRedirect('/shop/no-stores-yet')
+
+        avail_prod_ids = []
+        for p in stores:
+            for k in results:
+                if p == k.store:
+                    avail_prod_ids.append(k.id)
+
+        results = Product.objects.filter(id__in=avail_prod_ids)
+
+        sort_options = [(slugify(option[0]), option[1])
+                    for option in settings.SHOP_PRODUCT_SORT_OPTIONS]
+        sort_by = request.GET.get("sort", sort_options[0][1])
+        results = paginate(results.order_by(sort_by),
+                        request.GET.get("page", 1),
+                        settings.SHOP_PER_PAGE_CATEGORY,
+                        settings.MAX_PAGING_LINKS)
+        results.sort_by = sort_by
+
+    else:
+#        return render(request, template, {"have_loc": False})
+	info(request, _("Enter your location to use the search"))
+        return HttpResponseRedirect('/')
+
+#    paginated = paginate(results, page, per_page, max_paging_links)
+    paginated = results
+    context = {"query": query, "results": paginated,
+               "search_type": search_type, "have_loc": True}
+    return render(request, template, context)
 
 @staff_member_required
 def static_proxy(request):
