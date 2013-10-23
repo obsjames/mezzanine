@@ -37,15 +37,15 @@ install_requires = [
     "requests-oauthlib > 0.3.2, < 0.4",
 ]
 
-try:
-    from PIL import Image, ImageOps
-except ImportError:
-    try:
-        import Image, ImageFile, ImageOps
-    except ImportError:
-        # no way to install pillow/PIL with jython, so exclude this in any case
-        if not sys.platform.startswith('java'):
-            install_requires += ["pillow"]
+#try:
+#    from PIL import Image, ImageOps
+#except ImportError:
+#    try:
+#        import Image, ImageFile, ImageOps
+#    except ImportError:
+#        # no way to install pillow/PIL with jython, so exclude this in any case
+#        if not sys.platform.startswith('java'):
+#            install_requires += ["pillow"]
 
 
 try:
