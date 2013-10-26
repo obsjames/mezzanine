@@ -105,6 +105,11 @@ def search(request, template="search_results.html"):
     Display search results. Takes an optional "contenttype" GET parameter
     in the form "app-name.ModelName" to limit search results to a single model.
     """
+
+    if 'location' not in request.session or 'age' not in request.session:
+        info(request, _("Enter your location to use the search"))
+        return HttpResponseRedirect('/')
+
     settings.use_editable()
     query = request.GET.get("q", "")
     page = request.GET.get("page", 1)
@@ -149,11 +154,6 @@ def search(request, template="search_results.html"):
                         settings.SHOP_PER_PAGE_CATEGORY,
                         settings.MAX_PAGING_LINKS)
         results.sort_by = sort_by
-
-    else:
-#        return render(request, template, {"have_loc": False})
-	info(request, _("Enter your location to use the search"))
-        return HttpResponseRedirect('/')
 
 #    paginated = paginate(results, page, per_page, max_paging_links)
     paginated = results
