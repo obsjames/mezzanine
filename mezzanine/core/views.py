@@ -136,7 +136,7 @@ def search(request, template="search_results.html"):
             if avail_store_ids:
                 stores = Store.objects.filter(id__in=avail_store_ids)
             else:
-                return HttpResponseRedirect('/shop/no-stores-yet')
+                return HttpResponseRedirect('/shop/')
 
         avail_prod_ids = []
         for p in stores:
