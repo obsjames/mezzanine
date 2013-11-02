@@ -126,8 +126,10 @@ def search(request, template="search_results.html"):
         search_type = search_model._meta.verbose_name_plural.capitalize()
     results = search_model.objects.search(query, for_user=request.user)
 
+    cart_loaded = False
     if 'location' and 'age' in request.session:
         if 'cart loaded' in request.session:
+	    cart_loaded = True
             stores = request.session['stores']
 
         else:
@@ -158,7 +160,8 @@ def search(request, template="search_results.html"):
 #    paginated = paginate(results, page, per_page, max_paging_links)
     paginated = results
     context = {"query": query, "results": paginated,
-               "search_type": search_type, "have_loc": True}
+               "search_type": search_type, "have_loc": True,
+               "cart_loaded": cart_loaded}
     return render(request, template, context)
 
 @staff_member_required
