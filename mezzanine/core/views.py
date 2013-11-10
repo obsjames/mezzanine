@@ -29,6 +29,10 @@ from django.http import HttpResponseRedirect
 from django.template.defaultfilters import slugify
 from django.contrib.messages import info
 
+from stores.checkout import find_stores
+from stores.location_utils import getAddress, getLocation
+from stores.forms import StoreFilterForm
+
 def set_device(request, device=""):
     """
     Sets a device name in a cookie when a user explicitly wants to go
@@ -106,12 +110,43 @@ def search(request, template="search_results.html"):
     in the form "app-name.ModelName" to limit search results to a single model.
     """
 
-    if 'location' not in request.session or 'age' not in request.session:
+    if 'new location' not in request.session and 'location' not in request.session:
         info(request, _("Enter your location to use the search"))
         return HttpResponseRedirect('/')
 
+#    elif 'new location' in request.session and 'age' in request.session:
+#        loc = getLocation(request.session['new location'])
+#        request.session['location'] = (loc[0],loc[1])
+#        address = getAddress(loc[0],loc[1])
+#        request.session['address'] = address
+#        del request.session['new location']
+
+    elif 'location' in request.session and 'age' in request.session:
+        loc = request.session['location']
+
+    else:
+        return HttpResponseRedirect('/')
+
+    if 'new query' in request.session:
+	del request.session['new query']
+	map_required = True
+	request.session['map'] = True	
+    elif 'map' in request.session:
+    	map_required = True
+        del request.session['map']
+    else:
+        map_required = False
+
+    address = request.session['address']
+    current_store = []
+    if 'cart loaded' in request.session:
+        current_store = request.session['stores'][0]
+
     settings.use_editable()
     query = request.GET.get("q", "")
+    if not query:
+	if 'query' in request.session:
+	    query = request.session['query']
     page = request.GET.get("page", 1)
     per_page = settings.SEARCH_PER_PAGE
     max_paging_links = settings.MAX_PAGING_LINKS
@@ -126,42 +161,72 @@ def search(request, template="search_results.html"):
         search_type = search_model._meta.verbose_name_plural.capitalize()
     results = search_model.objects.search(query, for_user=request.user)
 
-    cart_loaded = False
-    if 'location' and 'age' in request.session:
-        if 'cart loaded' in request.session:
-	    cart_loaded = True
-            stores = request.session['stores']
+    delivery_mins = []
 
+    if 'cart loaded' in request.session:
+    	stores = request.session['stores']
+	store_locs, form = [], []
+	filter_form, cart_loaded = False, True
+
+    else:
+	filter_form, cart_loaded = True, False
+
+    	displayed_stores = []
+    	for result in results:
+            if result.store.name not in displayed_stores:
+            	delivery_mins.append(str(result.store.delivery_min))     #####
+            	displayed_stores.append(result.store.name)
+
+        if 'store ids' in request.session:
+       	    avail_store_ids, store_locs = request.session['store ids'], request.session['store locs']
+	else:
+	    avail_store_ids, avail_store_names, store_locs = find_stores(request, loc)
+
+        if avail_store_ids:
+
+	    stores = []
+
+            if request.method == 'POST': # If the form has been submitted...
+		form = StoreFilterForm(request.POST, stores=displayed_stores, delivery=delivery_mins)
+                if form.is_valid():
+		     for name in displayed_stores:
+			if form.cleaned_data["%s" % name]:
+			    stores.extend(Store.objects.filter(name__exact="%s" % name))
+
+		if not stores:
+		    stores = Store.objects.filter(id__in=avail_store_ids)
+	    else:
+            	form = StoreFilterForm(stores=displayed_stores, delivery=delivery_mins)
+            	stores = Store.objects.filter(id__in=avail_store_ids)
         else:
-            avail_store_ids = request.session['store ids']
+            return HttpResponseRedirect('/shop/')    ######!
 
-            if avail_store_ids:
-                stores = Store.objects.filter(id__in=avail_store_ids)
-            else:
-                return HttpResponseRedirect('/shop/')
+    avail_prod_ids = []
+    for p in stores:
+    	for k in results:
+            if p == k.store:
+      		avail_prod_ids.append(k.id)
 
-        avail_prod_ids = []
-        for p in stores:
-            for k in results:
-                if p == k.store:
-                    avail_prod_ids.append(k.id)
+    results = Product.objects.filter(id__in=avail_prod_ids)
+    sort_options = [(slugify(option[0]), option[1])
+                for option in settings.SHOP_PRODUCT_SORT_OPTIONS]
+    sort_by = request.GET.get("sort", sort_options[0][1])
 
-        results = Product.objects.filter(id__in=avail_prod_ids)
+    if sort_by=='-date_added':
+	request.session['query'] = query
 
-        sort_options = [(slugify(option[0]), option[1])
-                    for option in settings.SHOP_PRODUCT_SORT_OPTIONS]
-        sort_by = request.GET.get("sort", sort_options[0][1])
-        results = paginate(results.order_by(sort_by),
-                        request.GET.get("page", 1),
-                        settings.SHOP_PER_PAGE_CATEGORY,
-                        settings.MAX_PAGING_LINKS)
-        results.sort_by = sort_by
+    results = paginate(results.order_by(sort_by),
+                    request.GET.get("page", 1),
+                    settings.SHOP_PER_PAGE_CATEGORY,
+                    settings.MAX_PAGING_LINKS)
+    results.sort_by = sort_by
 
 #    paginated = paginate(results, page, per_page, max_paging_links)
     paginated = results
-    context = {"query": query, "results": paginated,
-               "search_type": search_type, "have_loc": True,
-               "cart_loaded": cart_loaded}
+    context = {"query": query, "results": paginated, 'map': map_required, 'lat': loc[0], 'lon': loc[1], "form_name": 'Stores',
+               "search_type": search_type, 'store_locs': store_locs, "form": form, "filter_form": filter_form,
+	       "cart_loaded": cart_loaded, "delivery_mins": delivery_mins, "address": address, "stores": current_store}
+
     return render(request, template, context)
 
 @staff_member_required

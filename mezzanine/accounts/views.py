@@ -20,7 +20,7 @@ from mezzanine.utils.views import render
 
 from stores import location_utils
 import ast
-from stores.checkout import new_location_get_ids
+from stores.checkout import find_stores
 
 User = get_user_model()
 
@@ -41,7 +41,7 @@ def login(request, template="accounts/account_login.html"):
         request.session['age'] = True
 
         loc = ast.literal_eval(request.session['location'])
-        avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+        avail_store_ids, avail_store_names, store_locs = find_stores(request, loc)
 
 #        return login_redirect(request)
         if 'cart loaded' in request.session:
@@ -68,8 +68,7 @@ def logout(request):
         del request.session['location']
         del request.session['address']
         del request.session['store ids']
-        del request.session['available store names']
-        del request.session['available liquor types']
+        del request.session['store names']
     if 'age' in request.session:
         del request.session['age']
 
@@ -113,7 +112,7 @@ def signup(request, template="accounts/account_signup.html"):
             request.session['address'] = correct_address
             request.session['map'] = True
 
-            avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+            avail_store_ids, avail_store_names, loc, store_locs = find_stores(request, loc)
 
 #            return login_redirect(request)
             if 'cart loaded' in request.session:
@@ -151,7 +150,7 @@ def signup_verify(request, uidb36=None, token=None):
         request.session['address'] = correct_address
         request.session['map'] = True
 
-        avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+        avail_store_ids, avail_store_names, store_locs = find_stores(request, loc)
 
 #        return login_redirect(request)
         if 'cart loaded' in request.session:
@@ -215,7 +214,7 @@ def profile_update(request, template="accounts/account_profile_update.html"):
             request.session['address'] = correct_address
             request.session['map'] = True
 
-            avail_store_ids, avail_store_names, avail_liquor_types, loc, store_locs = new_location_get_ids(request, loc)
+            avail_store_ids, avail_store_names, store_locs = find_stores(request, loc)
 
             return redirect("profile", username=user.username)
         except NoReverseMatch:
