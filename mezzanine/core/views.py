@@ -142,8 +142,7 @@ def search(request, template="search_results.html"):
         current_store = request.session['stores'][0]
 	store_slug = request.session['store slug']
     else:
-        current_store, store_slug = [], []
-
+	current_store, store_slug = [], []
 
     settings.use_editable()
     query = request.GET.get("q", "")
@@ -181,9 +180,9 @@ def search(request, template="search_results.html"):
             	displayed_stores.append(result.store.name)
 
         if 'store ids' in request.session:
-       	    avail_store_ids, store_locs = request.session['store ids'], request.session['store locs']
-	else:
-	    avail_store_ids, avail_store_names, store_locs = find_stores(request, loc)
+            avail_store_ids, avail_store_names, store_locs = request.session['store ids'], request.session['store names'], request.session['store locs']
+        else:
+            avail_store_ids, avail_store_names, store_locs, closed_store_ids, closed_store_names = find_stores(request, loc)
 
         if avail_store_ids:
 
