@@ -141,6 +141,7 @@ def search(request, template="search_results.html"):
     current_store = []
     if 'cart loaded' in request.session:
         current_store = request.session['stores'][0]
+	store_slug = request.session['store slug']
 
     settings.use_editable()
     query = request.GET.get("q", "")
@@ -225,7 +226,8 @@ def search(request, template="search_results.html"):
     paginated = results
     context = {"query": query, "results": paginated, 'map': map_required, 'lat': loc[0], 'lon': loc[1], "form_name": 'Stores',
                "search_type": search_type, 'store_locs': store_locs, "form": form, "filter_form": filter_form,
-	       "cart_loaded": cart_loaded, "delivery_mins": delivery_mins, "address": address, "stores": current_store}
+	       "cart_loaded": cart_loaded, "delivery_mins": delivery_mins, "address": address, "stores": current_store,
+	       "store_slug": store_slug}
 
     return render(request, template, context)
 
