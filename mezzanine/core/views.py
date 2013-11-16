@@ -138,10 +138,12 @@ def search(request, template="search_results.html"):
         map_required = False
 
     address = request.session['address']
-    current_store = []
     if 'cart loaded' in request.session:
         current_store = request.session['stores'][0]
 	store_slug = request.session['store slug']
+    else:
+        current_store, store_slug = [], []
+
 
     settings.use_editable()
     query = request.GET.get("q", "")
