@@ -130,7 +130,7 @@ def search(request, template="search_results.html"):
     if 'new query' in request.session:
 	del request.session['new query']
 	map_required = True
-	request.session['map'] = True	
+#	request.session['map'] = True	
     elif 'map' in request.session:
     	map_required = True
         del request.session['map']
@@ -182,7 +182,7 @@ def search(request, template="search_results.html"):
         if 'store ids' in request.session:
             avail_store_ids, avail_store_names, store_locs = request.session['store ids'], request.session['store names'], request.session['store locs']
         else:
-            avail_store_ids, avail_store_names, store_locs, closed_store_ids, closed_store_names = find_stores(request, loc)
+            avail_store_ids, avail_store_names, store_locs, closed_store_ids, closed_store_names, closed_locs = find_stores(request, loc)
 
         if avail_store_ids:
 
@@ -228,7 +228,7 @@ def search(request, template="search_results.html"):
     context = {"query": query, "results": paginated, 'map': map_required, 'lat': loc[0], 'lon': loc[1], "form_name": 'Stores',
                "search_type": search_type, 'store_locs': store_locs, "form": form, "filter_form": filter_form,
 	       "cart_loaded": cart_loaded, "delivery_mins": delivery_mins, "address": address, "stores": current_store,
-	       "store_slug": store_slug}
+	       "store_slug": store_slug, 'closed_locs': closed_locs}
 
     return render(request, template, context)
 
