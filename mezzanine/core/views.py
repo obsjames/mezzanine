@@ -181,6 +181,7 @@ def search(request, template="search_results.html"):
 
         if 'store ids' in request.session:
             avail_store_ids, avail_store_names, store_locs = request.session['store ids'], request.session['store names'], request.session['store locs']
+	    closed_locs = request.session['closed store locs']
         else:
             avail_store_ids, avail_store_names, store_locs, closed_store_ids, closed_store_names, closed_locs = find_stores(request, loc)
 
