@@ -167,7 +167,7 @@ def search(request, template="search_results.html"):
 
     if 'cart loaded' in request.session:
     	stores = request.session['stores']
-	store_locs, form = [], []
+	closed_locs, store_locs, form = [], [], []
 	filter_form, cart_loaded = False, True
 
     else:
